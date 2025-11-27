@@ -3,5 +3,95 @@
 <head>
   <meta charset="UTF-8">
   <title>Gerar estacoes_completo.json</title>
-...
+  <style>
+    body {
+      background: #0f172a;
+      color: white;
+      font-family: monospace;
+      padding: 20px;
+    }
+    textarea, button {
+      width: 100%;
+      margin-top: 10px;
+      padding: 10px;
+      background: #020617;
+      color: #22c55e;
+      border: 1px solid #22c55e;
+    }
+    button {
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<h2>🚇 Gerador de Coordenadas NextStop</h2>
+
+<p>1. Cole sua Google Maps API Key abaixo</p>
+<textarea id="apikey" placeholder="Cole sua GOOGLE_MAPS_API_KEY aqui"></textarea>
+
+<p>2. Cole seu estacoes.json AQUI</p>
+<textarea id="input" rows="20" placeholder='[ { "id":"luz", "nome":"Luz", ... } ]'></textarea>
+
+<button onclick="gerar()">GERAR ESTACOES COMPLETO</button>
+
+<p>✅ Resultado (copiar salvar como estacoes_completo.json):</p>
+<textarea id="output" rows="25"></textarea>
+
+<script>
+async function geocode(nome, key) {
+  const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+    "Estação " + nome + " São Paulo"
+  )}&key=${key}`;
+
+  const r = await fetch(url);
+  const d = await r.json();
+
+  if (d.status === "OK") {
+    return d.results[0].geometry.location;
+  }
+  return null;
+}
+
+async function gerar() {
+  const key = document.getElementById("apikey").value.trim();
+  const input = document.getElementById("input").value.trim();
+
+  if (!key) {
+    alert("Cole sua GOOGLE MAPS API KEY!");
+    return;
+  }
+
+  let stations;
+  try {
+    stations = JSON.parse(input);
+  } catch (e) {
+    alert("Seu JSON está inválido");
+    return;
+  }
+
+  const resultado = [];
+
+  for (let i = 0; i < stations.length; i++) {
+    const s = stations[i];
+
+    document.title = `Buscando: ${s.nome}`;
+
+    const loc = await geocode(s.nome, key);
+
+    resultado.push({
+      ...s,
+      latitude: loc ? loc.lat : null,
+      longitude: loc ? loc.lng : null
+    });
+
+    await new Promise(r => setTimeout(r, 300));
+  }
+
+  document.getElementById("output").value = JSON.stringify(resultado, null, 2);
+  document.title = "✅ FINALIZADO";
+  alert("PRONTO ✅ Copie o resultado e salve como estacoes_completo.json");
+}
+</script>
+</body>
 </html>
