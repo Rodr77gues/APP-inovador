@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>NextStop - Conecte-se nas Estações</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#111827" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="icons/icon-192.png" />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Google Maps API -->
+  <script
+    async
+    src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_KEY&libraries=places">
+  </script>
+
+  <!-- Firebase SDKs (Compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
+
+  <script src="firebase.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <div id="app">
+
+    <!-- Splash / Loader -->
+    <div id="splash-screen">
+      <div class="logo-circle">N</div>
+      <h1>NextStop</h1>
+      <p>Conecte-se com quem pega o mesmo caminho que você.</p>
+      <div class="spinner"></div>
+    </div>
+
+    <!-- Tela de Autenticação -->
+    <main id="auth-screen" class="screen hidden">
+      <header class="main-header">
+        <div class="logo-inline">
+          <div class="logo-circle small">N</div>
+          <span>NextStop</span>
+        </div>
+        <p class="subtitle">
+          Encontre pessoas que pegam o mesmo trajeto de CPTM e Metrô.
+        </p>
+      </header>
+
+      <section class="card auth-card">
+        <div class="tabs">
+          <button class="tab-button active" data-tab="login">Entrar</button>
+          <button class="tab-button" data-tab="signup">Cadastrar</button>
+        </div>
+
+        <!-- Login -->
+        <form id="login-form" class="tab-content active">
+          <label>
+            E-mail
+            <input type="email" id="login-email" required />
+          </label>
+          <label>
+            Senha
+            <input type="password" id="login-password" required />
+          </label>
+          <button type="submit" class="btn primary full">Entrar</button>
+        </form>
+
+        <!-- Cadastro -->
+        <form id="signup-form" class="tab-content">
+          <label>
+            Nome
+            <input type="text" id="signup-name" required />
+          </label>
+          <label>
+            E-mail
+            <input type="email" id="signup-email" required />
+          </label>
+          <label>
+            Senha
+            <input type="password" id="signup-password" minlength="6" required />
+          </label>
+          <button type="submit" class="btn primary full">Criar conta</button>
+        </form>
+
+        <div class="or-divider">
+          <span>ou</span>
+        </div>
+
+        <button id="google-login" class="btn ghost full">
+          Entrar com Google
+        </button>
+      </section>
+    </main>
+
+    <!-- Tela Principal -->
+    <main id="main-screen" class="screen hidden">
+      <header class="top-bar">
+        <div class="logo-inline">
+          <div class="logo-circle small">N</div>
+          <span>NextStop</span>
+        </div>
+        <button id="btn-open-profile" class="icon-button" title="Perfil">
+          👤
+        </button>
+      </header>
+
+      <section class="status-bar">
+        <div>
+          <p class="status-label">Sua rota diária</p>
+          <p class="status-text" id="current-route-text">
+            Defina a estação de entrada e saída para ver matches.
+          </p>
+        </div>
+        <button id="btn-edit-route" class="btn tiny secondary">
+          Editar rota
+        </button>
+      </section>
+
+      <section class="layout">
+        <div class="map-card card">
+          <div class="card-header">
+            <h2>Mapa em tempo real</h2>
+            <span class="badge" id="location-status">Localizando...</span>
+          </div>
+          <div id="map"></div>
+        </div>
+
+        <div class="side-panel">
+          <section class="card">
+            <div class="card-header">
+              <h2>Matches no seu trajeto</h2>
+              <span class="badge neutral" id="matches-count">0 pessoas</span>
+            </div>
+            <ul id="matches-list" class="list">
+              <!-- Matches renderizados aqui -->
+            </ul>
+          </section>
+
+          <section class="card">
+            <div class="card-header">
+              <h2>Mensagens</h2>
+              <span class="badge alert" id="unread-count">0 novas</span>
+            </div>
+            <div id="chat-preview-list" class="list">
+              <!-- Conversas recentes -->
+            </div>
+            <button id="btn-open-chat" class="btn ghost full">
+              Ver todas as mensagens
+            </button>
+          </section>
+        </div>
+      </section>
+
+      <nav class="bottom-nav">
+        <button class="nav-item active" data-nav="home">🏠<span>Início</span></button>
+        <button class="nav-item" data-nav="matches">💜<span>Matches</span></button>
+        <button class="nav-item" data-nav="messages">💬<span>Mensagens</span></button>
+      </nav>
+    </main>
+
+    <!-- Tela de Perfil / Rota -->
+    <div id="profile-modal" class="modal hidden">
+      <div class="modal-backdrop"></div>
+      <div class="modal-content card">
+        <div class="modal-header">
+          <h2>Seu perfil e rota</h2>
+          <button class="icon-button" id="close-profile-modal">✕</button>
+        </div>
+
+        <form id="profile-form" class="modal-body">
+          <label>
+            Nome
+            <input type="text" id="profile-name" required />
+          </label>
+
+          <label>
+            Estação de entrada
+            <select id="entry-station" required></select>
+          </label>
+
+          <label>
+            Estação de saída
+            <select id="exit-station" required></select>
+          </label>
+
+          <label>
+            Horário aproximado (ida)
+            <input type="time" id="time-go" />
+          </label>
+
+          <label>
+            Horário aproximado (volta)
+            <input type="time" id="time-back" />
+          </label>
+
+          <button type="submit" class="btn primary full">
+            Salvar rota
+          </button>
+        </form>
+
+        <button id="btn-logout" class="btn danger full">
+          Sair da conta
+        </button>
+      </div>
+    </div>
+
+    <!-- Tela de Chat -->
+    <div id="chat-modal" class="modal hidden">
+      <div class="modal-backdrop"></div>
+      <div class="modal-content chat card">
+        <div class="modal-header">
+          <div>
+            <h2 id="chat-title">Chat</h2>
+            <p id="chat-subtitle" class="subtitle"></p>
+          </div>
+          <button class="icon-button" id="close-chat-modal">✕</button>
+        </div>
+
+        <div id="chat-messages" class="chat-messages"></div>
+
+        <form id="chat-form" class="chat-input">
+          <input
+            type="text"
+            id="chat-input-text"
+            placeholder="Digite uma mensagem..."
+            required
+          />
+          <button type="submit" class="btn primary">Enviar</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Toast / Notificações internas -->
+    <div id="toast" class="toast hidden"></div>
+
+  </div>
+</body>
+</html>
